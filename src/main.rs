@@ -66,7 +66,18 @@ fn main() {
         1 => panic!("Error: missing argument: path to list file"),
         2 => {
             let podcast_list = read_podcast_list(&args[1]);
-            for podcast in podcast_list.lines() {
+            let mut podcast_list_iter = podcast_list.lines();
+            let mut config = podcast_list_iter.next().unwrap().split_whitespace().rev();
+            let default_tempo = config.next().expect("No default tempo configured");
+            let mut target_dir_reversed = String::new();
+            for string in config {
+                target_dir_reversed.push(' ');
+                target_dir_reversed.push_str(string);
+            };
+            let target_dir = reverse_words(target_dir_reversed);
+            let target_dir = target_dir.trim();
+            println!("{}, {}", target_dir, default_tempo);
+            for podcast in podcast_list_iter {
                 let mut podcast = podcast.split_whitespace().rev();
                 let url = podcast.next().unwrap();
                 let tempo: f32;
@@ -96,7 +107,7 @@ fn main() {
                             },
                             None => name_reversed = Some(name_or_tempo),
                         };
-                        tempo = 1.17;
+                        tempo = default_tempo.parse().unwrap();
                     },
                 };
                 let name = reverse_words(name_reversed.unwrap());
