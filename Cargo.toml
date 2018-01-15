@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["David Izquierdo <david@izquierdofernandez.com>"]
 
 [dependencies]
-futures = "0.1"
 hyper = "0.11"
-tokio-core = "0.1"
+reqwest = "0.8.2"
+sxd-document = "0.2.6"
+sxd-xpath = "0.4.1"

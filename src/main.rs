@@ -1,13 +1,15 @@
-extern crate futures;
 extern crate hyper;
-extern crate tokio_core;
+extern crate reqwest;
+extern crate sxd_document;
+extern crate sxd_xpath;
+
+use sxd_document::parser;
+use sxd_xpath::evaluate_xpath;
 
 use std::env;
 use std::fs::File;
-use std::io::{self, Read, Write};
-use futures::{Future, Stream};
-use hyper::Client;
-use tokio_core::reactor::Core;
+use std::io::Read;
+use hyper::Uri;
 
 struct Podcast<'a> {
     name: &'a str,
@@ -17,7 +19,7 @@ struct Podcast<'a> {
 
 impl<'a> Podcast<'a> {
     pub fn new(name: &'a str, tempo: f32, url_pre: &'a str) -> Podcast<'a> {
-        let url: hyper::Uri = match url_pre.parse(){
+        let url: Uri = match url_pre.parse(){
             Ok(uri) => uri,
             Err(_) => panic!("Podcast {} doesn't appear to have a valid URL", name),
         };
@@ -51,14 +53,6 @@ fn reverse_words(string: String) -> String {
     };
     reversed_string
 }
-/*
-fn get_feed(url: hyper::Uri) {
-    let mut core = Core::new().expect("Failed to set up Core");
-    let client = Client::new(&core.handle());
-    let mut feed = String::new;
-    let res = client.get(url).send().unwrap().read_to_string(&mut feed).unwrap();
-    println!("{}", feed);
-}*/
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -112,7 +106,18 @@ fn main() {
                 };
                 let name = reverse_words(name_reversed.unwrap());
                 let podcast = Podcast::new(name.trim(), tempo, url);
-                println!("{}", podcast);
+                println!("{}", podcast.name);
+                let feed = reqwest::get(url).unwrap().text().unwrap();
+                let feed_parsed = parser::parse(&feed).expect("Unable to parse XML data");
+                let feed_document = feed_parsed.as_document();
+                for item in vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {
+                    let realurl = evaluate_xpath(&feed_document,
+                                                 &format!("rss/channel/item[{}]/enclosure/@url", item)
+                                                  ).expect("Unable to parse XML data").string();
+                    let basename = realurl.split("/").last().unwrap();
+                    let basename = basename.rsplit("?").last().unwrap();
+                    println!("└─ Downloading {}", basename);
+                };
             }
         },
         _ => panic!("Error: too many arguments"),
