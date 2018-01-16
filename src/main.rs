@@ -1,4 +1,3 @@
-extern crate hyper;
 extern crate reqwest;
 extern crate sxd_document;
 extern crate sxd_xpath;
@@ -7,52 +6,12 @@ use sxd_document::parser;
 use sxd_xpath::evaluate_xpath;
 
 use std::env;
-use std::fs::File;
-use std::io::Read;
-use hyper::Uri;
 
-struct Podcast<'a> {
-    name: &'a str,
-    tempo: f32,
-    url: hyper::Uri,
-}
+mod podcast;
+mod lib;
 
-impl<'a> Podcast<'a> {
-    pub fn new(name: &'a str, tempo: f32, url_pre: &'a str) -> Podcast<'a> {
-        let url: Uri = match url_pre.parse(){
-            Ok(uri) => uri,
-            Err(_) => panic!("Podcast {} doesn't appear to have a valid URL", name),
-        };
-        Podcast {
-            name,
-            tempo,
-            url,
-        }
-    }
-}
-
-impl<'a> std::fmt::Display for Podcast<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Name: {}\nTempo: {}\nURL: {}", self.name, self.tempo, self.url)
-    }
-}
-
-fn read_podcast_list(file: &String) -> String {
-    let mut file = File::open(file).expect("No such file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).expect("Couldn't read file contents");
-    contents
-}
-
-fn reverse_words(string: String) -> String {
-    let string_iter = string.split_whitespace().rev();
-    let mut reversed_string = String::new();
-    for word in string_iter {
-        reversed_string.push_str(word);
-        reversed_string.push(' ');
-    };
-    reversed_string
-}
+use podcast::*;
+use lib::*;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
