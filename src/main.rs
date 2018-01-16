@@ -16,9 +16,10 @@ use lib::*;
 fn main() {
     let args: Vec<String> = env::args().collect();
     match args.len() {
-        1 => panic!("Error: missing argument: path to list file"),
-        2 => {
-            let podcast_list = read_podcast_list(&args[1]);
+        1 | 2 => println!("Error: missing arguments\nSyntax: `pod.rs podcast.list cache.db`"),
+        3 => {
+            let podcast_list = file_to_string(&args[1]);
+            let cache_list = file_to_string(&args[2]);
             let mut podcast_list_iter = podcast_list.lines();
             let mut config = podcast_list_iter.next().unwrap().split_whitespace().rev();
             let default_tempo = config.next().expect("No default tempo configured");
@@ -73,12 +74,19 @@ fn main() {
                     let realurl = evaluate_xpath(&feed_document,
                                                  &format!("rss/channel/item[{}]/enclosure/@url", item)
                                                   ).expect("Unable to parse XML data").string();
-                    let basename = realurl.split("/").last().unwrap();
-                    let basename = basename.rsplit("?").last().unwrap();
-                    println!("└─ Downloading {}", basename);
+                    match cache_list.rfind(&realurl) {
+                        None => {
+                            let basename = realurl.split("/").last().unwrap();
+                            let basename = basename.rsplit("?").last().unwrap();
+                            println!("└─ Downloading {}", basename);
+                            append_string_to_file(&args[2], &realurl);
+                            append_string_to_file(&args[2], &String::from("\n"));
+                        },
+                        _ => continue,
+                    };
                 };
             }
         },
-        _ => panic!("Error: too many arguments"),
+        _ => println!("Error: too many arguments\nSyntax: `pod.rs podcast.list cache.db`"),
     }
 }

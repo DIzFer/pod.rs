@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::Read;
+use std::fs::{File,OpenOptions};
+use std::io::{Read,Write};
 
-pub fn read_podcast_list(file: &String) -> String {
+pub fn file_to_string(file: &String) -> String {
     let mut file = File::open(file).expect("No such file");
     let mut contents = String::new();
     file.read_to_string(&mut contents).expect("Couldn't read file contents");
@@ -16,4 +16,13 @@ pub fn reverse_words(string: String) -> String {
         reversed_string.push(' ');
     };
     reversed_string
+}
+
+pub fn append_string_to_file(file: &String, string: &String) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(file)
+        .expect("Error trying to open file");
+    file.write_all(string.as_bytes()).expect("Unable to write to file");
 }
