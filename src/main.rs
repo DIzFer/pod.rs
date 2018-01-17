@@ -2,10 +2,13 @@ extern crate reqwest;
 extern crate sxd_document;
 extern crate sxd_xpath;
 
+use std::env;
+use std::fs::{File, create_dir_all};
+use std::io::Write;
+use std::path::PathBuf;
+
 use sxd_document::parser;
 use sxd_xpath::evaluate_xpath;
-
-use std::env;
 
 mod podcast;
 mod lib;
@@ -28,9 +31,12 @@ fn main() {
                 target_dir_reversed.push(' ');
                 target_dir_reversed.push_str(string);
             };
-            let target_dir = reverse_words(target_dir_reversed);
-            let target_dir = target_dir.trim();
-            println!("{}, {}", target_dir, default_tempo);
+            let mut target_dir = reverse_words(target_dir_reversed);
+            if target_dir.starts_with('~') {
+                target_dir = target_dir.replacen("~", env::home_dir().unwrap().to_str().unwrap(), 1);
+            }
+            println!("{}", target_dir);
+            let target_dir = PathBuf::from(target_dir.trim());
             for podcast in podcast_list_iter {
                 let mut podcast = podcast.split_whitespace().rev();
                 let url = podcast.next().unwrap();
@@ -71,15 +77,26 @@ fn main() {
                 let feed_parsed = parser::parse(&feed).expect("Unable to parse XML data");
                 let feed_document = feed_parsed.as_document();
                 for item in vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {
-                    let realurl = evaluate_xpath(&feed_document,
+                    let file_url = evaluate_xpath(&feed_document,
                                                  &format!("rss/channel/item[{}]/enclosure/@url", item)
                                                   ).expect("Unable to parse XML data").string();
-                    match cache_list.rfind(&realurl) {
+                    match cache_list.rfind(&file_url) {
                         None => {
-                            let basename = realurl.split("/").last().unwrap();
+                            let basename = file_url.split("/").last().unwrap();
                             let basename = basename.rsplit("?").last().unwrap();
                             println!("└─ Downloading {}", basename);
-                            append_string_to_file(&args[2], &realurl);
+                            let mut remote_file = reqwest::get(&file_url)
+                                .expect(&format!("Could not download file from {}", file_url));
+                            let mut buffer: Vec<u8> = vec![];
+                            remote_file.copy_to(&mut buffer).unwrap();
+                            let mut local_file_path = PathBuf::from(&target_dir);
+                            local_file_path.push(&podcast.name);
+                            create_dir_all(&local_file_path);
+                            local_file_path.push(&basename);
+                            let mut local_file = File::create(&local_file_path)
+                                .expect("Could not create audio file");
+                            local_file.write_all(&buffer);
+                            append_string_to_file(&args[2], &file_url);
                             append_string_to_file(&args[2], &String::from("\n"));
                         },
                         _ => continue,
