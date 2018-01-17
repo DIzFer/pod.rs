@@ -5,7 +5,14 @@ pub fn file_to_string(file: &String) -> String {
     let mut file = File::open(file).expect("No such file");
     let mut contents = String::new();
     file.read_to_string(&mut contents).expect("Couldn't read file contents");
-    contents
+    let mut contents_clean = String::new();
+    for line in contents.lines() {
+        if ! line.starts_with('#') {
+            contents_clean.push_str(line);
+            contents_clean.push('\n');
+        };
+    };
+    contents_clean
 }
 
 pub fn reverse_words(string: String) -> String {
