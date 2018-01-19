@@ -8,3 +8,4 @@ hyper = "0.11"
 reqwest = "0.8.2"
 sxd-document = "0.2.6"
 sxd-xpath = "0.4.1"
+chrono = { version = "0.4", features = ["serde"] }

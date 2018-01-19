@@ -1,12 +1,15 @@
+extern crate chrono;
 extern crate reqwest;
 extern crate sxd_document;
 extern crate sxd_xpath;
 
 use std::env;
-use std::fs::{File, create_dir_all};
+use std::fs::{File, create_dir_all, metadata, rename};
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::UNIX_EPOCH;
 
+use chrono::{Datelike,NaiveDateTime};
 use sxd_document::parser;
 use sxd_xpath::evaluate_xpath;
 
@@ -90,12 +93,29 @@ fn main() {
                             let mut buffer: Vec<u8> = vec![];
                             remote_file.copy_to(&mut buffer).unwrap();
                             let mut local_file_path = PathBuf::from(&target_dir);
+                            let mut final_file_path = PathBuf::from(&target_dir);
                             local_file_path.push(&podcast.name);
-                            create_dir_all(&local_file_path);
+                            final_file_path.push(&podcast.name);
+                            create_dir_all(&local_file_path).expect("Could not create necessary directories");
                             local_file_path.push(&basename);
                             let mut local_file = File::create(&local_file_path)
                                 .expect("Could not create audio file");
-                            local_file.write_all(&buffer);
+                            let file_date = metadata(&local_file_path)
+                                .expect("File wasn't downloaded for some reason")
+                                .modified().unwrap()
+                                .duration_since(UNIX_EPOCH).unwrap()
+                                .as_secs();
+                            let file_date = NaiveDateTime::from_timestamp(file_date as i64, 0);
+                            let mut final_file_name = String::from(format!("{}-{}-{}-", file_date.year(), file_date.month(), file_date.day()));
+                            final_file_name.push_str(&basename);
+                            final_file_path.push(&final_file_name);
+                            if &podcast.tempo == &(1.0 as f32) {
+                                rename(local_file_path, final_file_path)
+                                    .expect("Could not rename file");
+                            } else {
+                                println!("INSERT FFMPEG CODE HERE");
+                            };
+                            local_file.write_all(&buffer).expect("Could not write to file");
                             append_string_to_file(&args[2], &file_url);
                             append_string_to_file(&args[2], &String::from("\n"));
                         },
