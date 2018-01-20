@@ -79,10 +79,24 @@ fn main() {
                 let feed = reqwest::get(url).unwrap().text().unwrap();
                 let feed_parsed = parser::parse(&feed).expect("Unable to parse XML data");
                 let feed_document = feed_parsed.as_document();
-                for item in vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {
-                    let file_url = evaluate_xpath(&feed_document,
-                                                 &format!("rss/channel/item[{}]/enclosure/@url", item)
-                                                  ).expect("Unable to parse XML data").string();
+                let mut urls_to_download = Vec::new();
+                let mut item_count = 1;
+                loop {
+                    match evaluate_xpath(&feed_document, &format!("rss/channel/item[{}]/enclosure/@url", item_count)) {
+                        Ok(value) => {
+                            if &value.string() == "" {
+                                item_count = item_count + 1;
+                                break;
+                            } else {
+                            item_count = item_count + 1;
+                            let string = value.into_string();
+                            urls_to_download.push(string);
+                            };
+                        },
+                        Err(_) => println!("Something really weird happened here..."),
+                    };
+                };
+                for file_url in urls_to_download {
                     match cache_list.rfind(&file_url) {
                         None => {
                             let basename = file_url.split("/").last().unwrap();
