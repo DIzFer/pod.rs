@@ -4,9 +4,10 @@ extern crate sxd_document;
 extern crate sxd_xpath;
 
 use std::env;
-use std::fs::{File, create_dir_all, metadata, rename};
+use std::fs::{File, create_dir_all, metadata, rename, remove_file};
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::UNIX_EPOCH;
 
 use chrono::{Datelike, NaiveDateTime};
@@ -89,7 +90,6 @@ fn main() {
                     ) {
                         Ok(value) => {
                             if &value.string() == "" {
-                                item_count = item_count + 1;
                                 break;
                             } else {
                                 item_count = item_count + 1;
@@ -114,14 +114,21 @@ fn main() {
                             remote_file.copy_to(&mut buffer).unwrap();
                             let mut local_file_path = PathBuf::from(&target_dir);
                             let mut final_file_path = PathBuf::from(&target_dir);
+                            let mut cover_file_path = PathBuf::from(&target_dir);
                             local_file_path.push(&podcast.name);
                             final_file_path.push(&podcast.name);
+                            cover_file_path.push(&podcast.name);
                             create_dir_all(&local_file_path).expect(
                                 "Could not create necessary directories",
                             );
                             local_file_path.push(&basename);
+                            cover_file_path.push("cover.jpg"); //FIXME: Should probably guess extension from actual filetype.
+                            //Voice for Android just swallows whatever I put in cover.jpg and displays it fine ¯\_(ツ)_/¯
                             let mut local_file = File::create(&local_file_path).expect(
                                 "Could not create audio file",
+                            );
+                            local_file.write_all(&buffer).expect(
+                                "Could not write to file",
                             );
                             let file_date = metadata(&local_file_path)
                                 .expect("File wasn't downloaded for some reason")
@@ -139,16 +146,41 @@ fn main() {
                             ));
                             final_file_name.push_str(&basename);
                             final_file_path.push(&final_file_name);
+                            Command::new("ffmpeg")
+                                .args(
+                                    &[
+                                        "-i",
+                                        local_file_path.to_str().unwrap(),
+                                        "-vcodec",
+                                        "copy",
+                                        "-an",
+                                        cover_file_path.to_str().unwrap(),
+                                    ],
+                                )
+                                .status()
+                                .expect("FFMPEG failed");
                             if &podcast.tempo == &(1.0 as f32) {
                                 rename(local_file_path, final_file_path).expect(
                                     "Could not rename file",
                                 );
                             } else {
-                                println!("INSERT FFMPEG CODE HERE");
+                                final_file_path.set_extension("opus");
+                                Command::new("ffmpeg")
+                                    .args(
+                                        &[
+                                            "-i",
+                                            local_file_path.to_str().unwrap(),
+                                            "-filter:a",
+                                            &format!("atempo={}", &podcast.tempo),
+                                            "-b:a",
+                                            "192k",
+                                            final_file_path.to_str().unwrap(),
+                                        ],
+                                    )
+                                    .status()
+                                    .expect("FFMPEG failed");
+                                remove_file(&local_file_path).expect("Could not remove file");
                             };
-                            local_file.write_all(&buffer).expect(
-                                "Could not write to file",
-                            );
                             append_string_to_file(&args[2], &file_url);
                             append_string_to_file(&args[2], &String::from("\n"));
                         }
