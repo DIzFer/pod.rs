@@ -157,7 +157,7 @@ fn main() {
                                         cover_file_path.to_str().unwrap(),
                                     ],
                                 )
-                                .status()
+                                .output()
                                 .expect("FFMPEG failed");
                             if &podcast.tempo == &(1.0 as f32) {
                                 rename(local_file_path, final_file_path).expect(
@@ -177,7 +177,7 @@ fn main() {
                                             final_file_path.to_str().unwrap(),
                                         ],
                                     )
-                                    .status()
+                                    .output()
                                     .expect("FFMPEG failed");
                                 remove_file(&local_file_path).expect("Could not remove file");
                             };
