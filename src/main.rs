@@ -24,9 +24,12 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     match args.len() {
         1 | 2 => println!("Error: missing arguments\nSyntax: `pod.rs podcast.list cache.db`"),
-        3 => {
+        3 | 4 => {
             let podcast_list = file_to_string(&args[1]);
             let cache_list = file_to_string(&args[2]);
+            if args.len() == 4 && &args[3] == "-p" {
+                println!("Only pretending to download, marking chapters as read");
+            }
             let mut podcast_list_iter = podcast_list.lines();
             let mut config = podcast_list_iter.next().unwrap().split_whitespace().rev();
             let default_tempo = config.next().expect("No default tempo configured");
@@ -105,82 +108,86 @@ fn main() {
                         None => {
                             let basename = file_url.split("/").last().unwrap();
                             let basename = basename.rsplit("?").last().unwrap();
-                            println!("└─ Downloading {}", basename);
-                            let mut remote_file = reqwest::get(&file_url).expect(&format!(
-                                "Could not download file from {}",
-                                file_url
-                            ));
-                            let mut buffer: Vec<u8> = vec![];
-                            remote_file.copy_to(&mut buffer).unwrap();
-                            let mut local_file_path = PathBuf::from(&target_dir);
-                            let mut final_file_path = PathBuf::from(&target_dir);
-                            let mut cover_file_path = PathBuf::from(&target_dir);
-                            local_file_path.push(&podcast.name);
-                            final_file_path.push(&podcast.name);
-                            cover_file_path.push(&podcast.name);
-                            create_dir_all(&local_file_path).expect(
-                                "Could not create necessary directories",
-                            );
-                            local_file_path.push(&basename);
-                            cover_file_path.push("cover.jpg"); //FIXME: Should probably guess extension from actual filetype.
-                            //Voice for Android just swallows whatever I put in cover.jpg and displays it fine ¯\_(ツ)_/¯
-                            let mut local_file = File::create(&local_file_path).expect(
-                                "Could not create audio file",
-                            );
-                            local_file.write_all(&buffer).expect(
-                                "Could not write to file",
-                            );
-                            let file_date = metadata(&local_file_path)
-                                .expect("File wasn't downloaded for some reason")
-                                .modified()
-                                .unwrap()
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap()
-                                .as_secs();
-                            let file_date = NaiveDateTime::from_timestamp(file_date as i64, 0);
-                            let mut final_file_name = String::from(format!(
-                                "{}-{}-{}-",
-                                file_date.year(),
-                                file_date.month(),
-                                file_date.day()
-                            ));
-                            final_file_name.push_str(&basename);
-                            final_file_path.push(&final_file_name);
-                            Command::new("ffmpeg")
-                                .args(
-                                    &[
-                                        "-i",
-                                        local_file_path.to_str().unwrap(),
-                                        "-vcodec",
-                                        "copy",
-                                        "-an",
-                                        cover_file_path.to_str().unwrap(),
-                                    ],
-                                )
-                                .output()
-                                .expect("FFMPEG failed");
-                            if &podcast.tempo == &(1.0 as f32) {
-                                rename(local_file_path, final_file_path).expect(
-                                    "Could not rename file",
-                                );
+                            if args.len() == 4 && &args[3] == "-p" {
+                                println!("└─ Marking {} as fetched", basename);
                             } else {
-                                final_file_path.set_extension("opus");
+                                println!("└─ Downloading {}", basename);
+                                let mut remote_file = reqwest::get(&file_url).expect(&format!(
+                                    "Could not download file from {}",
+                                    file_url
+                                ));
+                                let mut buffer: Vec<u8> = vec![];
+                                remote_file.copy_to(&mut buffer).unwrap();
+                                let mut local_file_path = PathBuf::from(&target_dir);
+                                let mut final_file_path = PathBuf::from(&target_dir);
+                                let mut cover_file_path = PathBuf::from(&target_dir);
+                                local_file_path.push(&podcast.name);
+                                final_file_path.push(&podcast.name);
+                                cover_file_path.push(&podcast.name);
+                                create_dir_all(&local_file_path).expect(
+                                    "Could not create necessary directories",
+                                );
+                                local_file_path.push(&basename);
+                                cover_file_path.push("cover.jpg"); //FIXME: Should probably guess extension from actual filetype.
+                                //Voice for Android just swallows whatever I put in cover.jpg and displays it fine ¯\_(ツ)_/¯
+                                let mut local_file = File::create(&local_file_path).expect(
+                                    "Could not create audio file",
+                                );
+                                local_file.write_all(&buffer).expect(
+                                    "Could not write to file",
+                                );
+                                let file_date = metadata(&local_file_path)
+                                    .expect("File wasn't downloaded for some reason")
+                                    .modified()
+                                    .unwrap()
+                                    .duration_since(UNIX_EPOCH)
+                                    .unwrap()
+                                    .as_secs();
+                                let file_date = NaiveDateTime::from_timestamp(file_date as i64, 0);
+                                let mut final_file_name = String::from(format!(
+                                    "{}-{}-{}-",
+                                    file_date.year(),
+                                    file_date.month(),
+                                    file_date.day()
+                                ));
+                                final_file_name.push_str(&basename);
+                                final_file_path.push(&final_file_name);
                                 Command::new("ffmpeg")
                                     .args(
                                         &[
                                             "-i",
                                             local_file_path.to_str().unwrap(),
-                                            "-filter:a",
-                                            &format!("atempo={}", &podcast.tempo),
-                                            "-b:a",
-                                            "192k",
-                                            final_file_path.to_str().unwrap(),
+                                            "-vcodec",
+                                            "copy",
+                                            "-an",
+                                            cover_file_path.to_str().unwrap(),
                                         ],
                                     )
                                     .output()
                                     .expect("FFMPEG failed");
-                                remove_file(&local_file_path).expect("Could not remove file");
-                            };
+                                if &podcast.tempo == &(1.0 as f32) {
+                                    rename(local_file_path, final_file_path).expect(
+                                        "Could not rename file",
+                                    );
+                                } else {
+                                    final_file_path.set_extension("opus");
+                                    Command::new("ffmpeg")
+                                        .args(
+                                            &[
+                                                "-i",
+                                                local_file_path.to_str().unwrap(),
+                                                "-filter:a",
+                                                &format!("atempo={}", &podcast.tempo),
+                                                "-b:a",
+                                                "192k",
+                                                final_file_path.to_str().unwrap(),
+                                            ],
+                                        )
+                                        .output()
+                                        .expect("FFMPEG failed");
+                                    remove_file(&local_file_path).expect("Could not remove file");
+                                };
+                            }
                             append_string_to_file(&args[2], &file_url);
                             append_string_to_file(&args[2], &String::from("\n"));
                         }
