@@ -85,20 +85,17 @@ fn main() {
                 let feed_parsed = parser::parse(&feed).expect("Unable to parse XML data");
                 let feed_document = feed_parsed.as_document();
                 let mut urls_to_download = Vec::new();
-                let mut item_count = 1;
-                loop {
+                let mut item_count: usize = 1;
+                let amount_of_enclosures = &feed.matches("enclosure").count();
+                while &item_count <= &amount_of_enclosures {
                     match evaluate_xpath(
                         &feed_document,
                         &format!("rss/channel/item[{}]/enclosure/@url", item_count),
                     ) {
                         Ok(value) => {
-                            if &value.string() == "" {
-                                break;
-                            } else {
-                                item_count = item_count + 1;
-                                let string = value.into_string();
-                                urls_to_download.push(string);
-                            };
+                            item_count = item_count + 1;
+                            let string = value.into_string();
+                            urls_to_download.push(string);
                         }
                         Err(_) => println!("Something really weird happened here..."),
                     };
