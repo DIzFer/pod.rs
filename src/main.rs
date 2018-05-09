@@ -4,10 +4,9 @@ extern crate sxd_document;
 extern crate sxd_xpath;
 
 use std::env;
-use std::fs::{File, create_dir_all, metadata, rename, remove_file};
+use std::fs::{File, create_dir_all, metadata, rename};
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Command;
 use std::time::UNIX_EPOCH;
 
 use chrono::{Datelike, NaiveDateTime};
@@ -32,7 +31,6 @@ fn main() {
             }
             let mut podcast_list_iter = podcast_list.lines();
             let mut config = podcast_list_iter.next().unwrap().split_whitespace().rev();
-            let default_tempo = config.next().expect("No default tempo configured");
             let mut target_dir_reversed = String::new();
             for string in config {
                 target_dir_reversed.push(' ');
@@ -48,38 +46,9 @@ fn main() {
             for podcast in podcast_list_iter {
                 let mut podcast = podcast.split_whitespace().rev();
                 let url = podcast.next().unwrap();
-                let tempo: f32;
-                let name_or_tempo = String::from(podcast.next().unwrap());
-                let name_reversed;
-                match name_or_tempo.parse::<f32>() {
-                    Ok(float) => {
-                        tempo = float;
-                        let mut name_unwrapped = String::from(podcast.next().unwrap());
-                        for fragment in podcast {
-                            name_unwrapped.push(' ');
-                            name_unwrapped.push_str(fragment);
-                        }
-                        name_reversed = Some(name_unwrapped);
-                    }
-                    Err(_) => {
-                        match podcast.next() {
-                            Some(string) => {
-                                let mut name_unwrapped = String::from(name_or_tempo);
-                                name_unwrapped.push(' ');
-                                name_unwrapped.push_str(string);
-                                for fragment in podcast {
-                                    name_unwrapped.push(' ');
-                                    name_unwrapped.push_str(fragment);
-                                }
-                                name_reversed = Some(name_unwrapped);
-                            }
-                            None => name_reversed = Some(name_or_tempo),
-                        };
-                        tempo = default_tempo.parse().unwrap();
-                    }
-                };
+                let name = String::from(podcast.next().unwrap());
                 let name = reverse_words(name_reversed.unwrap());
-                let podcast = Podcast::new(name.trim(), tempo, url);
+                let podcast = Podcast::new(name.trim(), url);
                 println!("{}", podcast.name);
                 let feed = reqwest::get(url).unwrap().text().unwrap();
                 let feed_parsed = parser::parse(&feed).expect("Unable to parse XML data");
@@ -149,41 +118,9 @@ fn main() {
                                 ));
                                 final_file_name.push_str(&basename);
                                 final_file_path.push(&final_file_name);
-                                Command::new("ffmpeg")
-                                    .args(
-                                        &[
-                                            "-i",
-                                            local_file_path.to_str().unwrap(),
-                                            "-vcodec",
-                                            "copy",
-                                            "-an",
-                                            cover_file_path.to_str().unwrap(),
-                                        ],
-                                    )
-                                    .output()
-                                    .expect("FFMPEG failed");
-                                if &podcast.tempo == &(1.0 as f32) {
-                                    rename(local_file_path, final_file_path).expect(
-                                        "Could not rename file",
-                                    );
-                                } else {
-                                    final_file_path.set_extension("opus");
-                                    Command::new("ffmpeg")
-                                        .args(
-                                            &[
-                                                "-i",
-                                                local_file_path.to_str().unwrap(),
-                                                "-filter:a",
-                                                &format!("atempo={}", &podcast.tempo),
-                                                "-b:a",
-                                                "192k",
-                                                final_file_path.to_str().unwrap(),
-                                            ],
-                                        )
-                                        .output()
-                                        .expect("FFMPEG failed");
-                                    remove_file(&local_file_path).expect("Could not remove file");
-                                };
+                                rename(local_file_path, final_file_path).expect(
+                                    "Could not rename file",
+                                );
                             }
                             append_string_to_file(&args[2], &file_url);
                             append_string_to_file(&args[2], &String::from("\n"));
