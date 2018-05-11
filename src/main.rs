@@ -89,11 +89,14 @@ fn main() {
                                 );
                             } else {
                                 println!("└─ Downloading {}", basename);
-                                let mut remote_file = reqwest::get(&file_url)
-                                    .expect(&format!(
-                                        "Could not download file from {}",
-                                        file_url
-                                    ));
+                                let mut remote_file =
+                                    match reqwest::get(&file_url) {
+                                        Ok(mut content) => content,
+                                        Err(error) => {
+                                            println!("└─ {}", error);
+                                            continue;
+                                        }
+                                    };
                                 let mut buffer: Vec<u8> = vec![];
                                 remote_file.copy_to(&mut buffer).unwrap();
                                 let mut local_file_path =
