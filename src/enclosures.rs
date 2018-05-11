@@ -23,8 +23,8 @@ struct Enclosure {
 
 pub fn get_enclosures(document: String) -> Vec<String> {
     let mut list_of_urls = Vec::new();
-    let deserialized_feed: RSS =
-        serde_xml_rs::deserialize(document.as_bytes()).expect("Not a valid XML document");
+    let deserialized_feed: RSS = serde_xml_rs::deserialize(document.as_bytes())
+        .expect("Not a valid XML document");
     for item in deserialized_feed.channel.item {
         list_of_urls.push(item.enclosure.url);
     }
