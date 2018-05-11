@@ -61,7 +61,21 @@ fn main() {
                     reverse_words(podcast.collect::<Vec<&str>>().join(" "));
                 let podcast = Podcast::new(name.trim(), url);
                 println!("{}", podcast.name);
-                let feed = reqwest::get(url).unwrap().text().unwrap();
+                let feed = match reqwest::get(url) {
+                    Ok(mut content) => {
+                        match content.text() {
+                            Ok(mut content_text) => content_text,
+                            Err(error) => {
+                                println!("└─ {}", error);
+                                continue;
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        println!("└─ {}", error);
+                        continue;
+                    }
+                };
                 let urls_to_download: Vec<String> = get_enclosures(feed);
                 for file_url in urls_to_download {
                     match cache_list.rfind(&file_url) {
