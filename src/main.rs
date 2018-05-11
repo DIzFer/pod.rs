@@ -1,7 +1,7 @@
 extern crate chrono;
 extern crate reqwest;
-extern crate sxd_document;
-extern crate sxd_xpath;
+#[macro_use]
+extern crate serde_derive;
 
 use std::env;
 use std::fs::{File, create_dir_all, metadata, rename};
@@ -10,14 +10,14 @@ use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 
 use chrono::{Datelike, NaiveDateTime};
-use sxd_document::parser;
-use sxd_xpath::evaluate_xpath;
 
 mod podcast;
 mod lib;
+mod enclosures;
 
 use podcast::*;
 use lib::*;
+use enclosures::get_enclosures;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -46,29 +46,11 @@ fn main() {
             for podcast in podcast_list_iter {
                 let mut podcast = podcast.split_whitespace().rev();
                 let url = podcast.next().unwrap();
-                let name = String::from(podcast.next().unwrap());
-                let name = reverse_words(name_reversed.unwrap());
+                let name = reverse_words(podcast.collect::<Vec<&str>>().join(" "));
                 let podcast = Podcast::new(name.trim(), url);
                 println!("{}", podcast.name);
                 let feed = reqwest::get(url).unwrap().text().unwrap();
-                let feed_parsed = parser::parse(&feed).expect("Unable to parse XML data");
-                let feed_document = feed_parsed.as_document();
-                let mut urls_to_download = Vec::new();
-                let mut item_count: usize = 1;
-                let amount_of_enclosures = &feed.matches("enclosure").count();
-                while &item_count <= &amount_of_enclosures {
-                    match evaluate_xpath(
-                        &feed_document,
-                        &format!("rss/channel/item[{}]/enclosure/@url", item_count),
-                    ) {
-                        Ok(value) => {
-                            item_count = item_count + 1;
-                            let string = value.into_string();
-                            urls_to_download.push(string);
-                        }
-                        Err(_) => println!("Something really weird happened here..."),
-                    };
-                }
+                let urls_to_download: Vec<String> = get_enclosures(feed);
                 for file_url in urls_to_download {
                     match cache_list.rfind(&file_url) {
                         None => {

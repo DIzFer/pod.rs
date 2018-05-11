@@ -47,7 +47,8 @@ NOTE: I recently decided to remove the reencoding functionality for several reas
     2. I had to extract the cover art, because I have no idea what I'm doing and I couldn't keep it while transcoding.
     3. Said cover art would always output cover.jpg. Had the cover art encoded as a PNG image? Too bad. Since my podcast player of choice doesn't care about the file extension as long as it's an image extension with image content, I was lazy enough to leave it that way.
     4. I couldn't keep chapter markers, because I don't know what I'm doing.
-    5. This afternoon I decided to check how much space was I saving by reencoding. Opus is magic after all, right? Well...
+    5. The generated files made [Voice](https://github.com/PaulWoitaschek/Voice) hang when a file was deleted, rendering it impossible to play another file. Thank god for Lineage's "Hold back to kill app" function.
+    6. This afternoon I decided to check how much space was I saving by reencoding. Opus is magic after all, right? Well...
     ```
     $ du -hs ~/podcasts/Unplugged/2018-5-9-953278e5-4970-4b31-a985-81c9bad3f58b.mp3 /tmp/blarg.opus                                           ~
     62M     /home/mack/podcasts/Unplugged/2018-5-9-953278e5-4970-4b31-a985-81c9bad3f58b.mp3
