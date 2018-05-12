@@ -103,17 +103,13 @@ fn main() {
                                     PathBuf::from(&target_dir);
                                 let mut final_file_path =
                                     PathBuf::from(&target_dir);
-                                let mut cover_file_path =
-                                    PathBuf::from(&target_dir);
+                                PathBuf::from(&target_dir);
                                 local_file_path.push(&podcast.name);
                                 final_file_path.push(&podcast.name);
-                                cover_file_path.push(&podcast.name);
                                 create_dir_all(&local_file_path).expect(
                                     "Could not create necessary directories",
                                 );
                                 local_file_path.push(&basename);
-                                cover_file_path.push("cover.jpg"); //FIXME: Should probably guess extension from actual filetype.
-                                //Voice for Android just swallows whatever I put in cover.jpg and displays it fine ¯\_(ツ)_/¯
                                 let mut local_file =
                                     File::create(&local_file_path).expect(
                                         "Could not create audio file",
