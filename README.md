@@ -39,20 +39,32 @@ For example:
 
 
 NOTE: I recently decided to remove the reencoding functionality for several reasons:
+
   1. I don't have enough podcasts to last me all my commutes during a week. Listening to them faster doesn't do me any favours.
+
   2. There's no stable/easy to use crate for manipulating media on Rust. I hear good things about the GStreamer bindings... But I didn't manage to learn how they should be used. This is my first software project after all. Which leads us directly to:
+
   3. It was implemented with `std::process::Command`. Calling other executables feels wrong if done from anything other than a shell script.
+
   4. I have no idea how ffmpeg works, which resulted in a nested list of wrongdoings:
+
     1. It was hardcoded to opus files. Not that bad, but keep reading.
+
     2. I had to extract the cover art, because I have no idea what I'm doing and I couldn't keep it while transcoding.
+
     3. Said cover art would always output cover.jpg. Had the cover art encoded as a PNG image? Too bad. Since my podcast player of choice doesn't care about the file extension as long as it's an image extension with image content, I was lazy enough to leave it that way.
+
     4. I couldn't keep chapter markers, because I don't know what I'm doing.
+
     5. The generated files made [Voice](https://github.com/PaulWoitaschek/Voice) hang when a file was deleted, rendering it impossible to play another file. Thank god for Lineage's "Hold back to kill app" function.
+
     6. This afternoon I decided to check how much space was I saving by reencoding. Opus is magic after all, right? Well...
-    ```
+    
+    ```bash
     $ du -hs ~/podcasts/Unplugged/2018-5-9-953278e5-4970-4b31-a985-81c9bad3f58b.mp3 /tmp/blarg.opus                                           ~
     62M     /home/mack/podcasts/Unplugged/2018-5-9-953278e5-4970-4b31-a985-81c9bad3f58b.mp3
     107M    /tmp/blarg.opus
     $ # Fuck that
     ```
+
   5. Someone told me that a podcast should be listened at the speed the author intended, as if they were a form of art. Someone other said that it was a pity that all the effort they put into encoding the bazillion tracks of the source into a perfect stereo was for nothing. I don't agree 100% with either of those arguments against, but 90% is enough to add to the previous points, even if just out of respect for the work they put on their podcasts.
