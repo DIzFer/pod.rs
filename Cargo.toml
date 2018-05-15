@@ -10,3 +10,4 @@ serde_derive = "1.0"
 serde = "1.0"
 serde-xml-rs = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
+clap = "2"

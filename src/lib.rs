@@ -1,7 +1,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 
-pub fn file_to_string(file: &String) -> String {
+pub fn file_to_string(file: &str) -> String {
     let mut file = File::open(file).expect("No such file");
     let mut contents = String::new();
     file.read_to_string(&mut contents).expect(
@@ -27,7 +27,7 @@ pub fn reverse_words(string: String) -> String {
     reversed_string
 }
 
-pub fn append_string_to_file(file: &String, string: &String) {
+pub fn append_string_to_file(file: &str, string: &String) {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
