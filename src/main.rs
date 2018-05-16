@@ -126,8 +126,14 @@ fn main() {
                             "Could not rename file",
                         );
                     }
-                    append_string_to_file(&cache_list, &file_url);
-                    append_string_to_file(&cache_list, &String::from("\n"));
+                    append_string_to_file(
+                        &args.value_of("db").expect("Error parsing cache list:"),
+                        &file_url,
+                    );
+                    append_string_to_file(
+                        &args.value_of("db").expect("Error parsing cache list:"),
+                        &String::from("\n"),
+                    );
                 }
                 _ => continue,
             };
