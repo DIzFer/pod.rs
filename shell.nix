@@ -7,5 +7,6 @@ stdenv.mkDerivation rec {
     openssl_1_1_0
     cargo
     rustc
+    rustfmt
   ];
 }
