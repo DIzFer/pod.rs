@@ -1,5 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
+use std::env;
 
 pub fn file_to_string(file: &str) -> String {
     let mut file = File::open(file).expect("No such file");
@@ -36,4 +37,8 @@ pub fn append_string_to_file(file: &str, string: &String) {
     file.write_all(string.as_bytes()).expect(
         "Unable to write to file",
     );
+}
+
+pub fn replace_tilde(path: &str) -> String {
+    path.replacen("~", env::home_dir().unwrap().to_str().unwrap(), 1)
 }
