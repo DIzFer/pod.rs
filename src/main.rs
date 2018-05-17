@@ -5,7 +5,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate clap;
 
-use std::env;
 use std::fs::{File, create_dir_all, metadata, rename};
 use std::io::Write;
 use std::path::PathBuf;
@@ -14,6 +13,7 @@ use std::time::UNIX_EPOCH;
 use chrono::{Datelike, NaiveDateTime};
 
 mod podcast;
+mod list;
 mod lib;
 mod enclosures;
 mod cli;
@@ -24,41 +24,25 @@ use enclosures::get_enclosures;
 
 fn main() {
     let args = cli::build_cli().get_matches();
-    let podcast_list = file_to_string(&args.value_of("list").expect(
-        "Error parsing podcast list:",
-    ));
+    let podcast_list =
+        list::List::read(String::from(
+            args.value_of("list").expect("Error parsing podcast list"),
+        ));
     let cache_list =
         file_to_string(args.value_of("db").expect("Error parsing cache list:"));
     if args.is_present("pretend") {
         println!("Only pretending to download, marking chapters as read");
     }
-    let mut podcast_list_iter = podcast_list.lines();
-    let config = podcast_list_iter.next().unwrap().split_whitespace().rev();
-    let mut target_dir_reversed = String::new();
-    for string in config {
-        target_dir_reversed.push(' ');
-        target_dir_reversed.push_str(string);
-    }
-    let mut target_dir = reverse_words(target_dir_reversed);
-    if target_dir.starts_with('~') {
-        target_dir = target_dir.replacen(
-            "~",
-            env::home_dir().unwrap().to_str().unwrap(),
-            1,
-        );
-    }
-    println!("{}", target_dir);
-    let target_dir = PathBuf::from(target_dir.trim());
-    for podcast in podcast_list_iter {
-        let mut podcast = podcast.split_whitespace().rev();
-        let url = podcast.next().unwrap();
-        let name = reverse_words(podcast.collect::<Vec<&str>>().join(" "));
-        let podcast = Podcast::new(name.trim(), url);
+    println!(
+        "Downloading to: {}",
+        podcast_list.target_path.to_str().unwrap()
+    );
+    for podcast in podcast_list.podcasts {
         println!("{}", podcast.name);
-        let feed = match reqwest::get(url) {
+        let feed = match reqwest::get(&podcast.url) {
             Ok(mut content) => {
                 match content.text() {
-                    Ok(mut content_text) => content_text,
+                    Ok(content_text) => content_text,
                     Err(error) => {
                         println!("└─ {}", error);
                         continue;
@@ -89,9 +73,11 @@ fn main() {
                         };
                         let mut buffer: Vec<u8> = vec![];
                         remote_file.copy_to(&mut buffer).unwrap();
-                        let mut local_file_path = PathBuf::from(&target_dir);
-                        let mut final_file_path = PathBuf::from(&target_dir);
-                        PathBuf::from(&target_dir);
+                        let mut local_file_path =
+                            PathBuf::from(&podcast_list.target_path);
+                        let mut final_file_path =
+                            PathBuf::from(&podcast_list.target_path);
+                        PathBuf::from(&podcast_list.target_path);
                         local_file_path.push(&podcast.name);
                         final_file_path.push(&podcast.name);
                         create_dir_all(&local_file_path).expect(
